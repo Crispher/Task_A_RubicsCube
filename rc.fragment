@@ -1,0 +1,47 @@
+#version 410 core
+uniform sampler2D sampler;
+
+uniform float ambient = 0.2;
+uniform int shading_mode;
+uniform int dim = 3;
+
+uniform vec3 ls_pos = vec3(0, 0, -5);
+uniform float attenuation = 1;
+
+in vec3 pos;
+in vec2 tex_coord;
+in vec3 normal;
+out vec4 color;
+
+bool approx(float a, float b) {
+	return abs(a - b) < 1e-2;
+}
+
+void main() {
+	for (int i = 0; i <= dim; i++) {
+		if (approx(tex_coord.x, float(i) / dim) ||
+				approx(tex_coord.y, float(i) / dim) ){
+			color = vec4(0, 0, 0, 1);
+			return;	
+		}
+	}
+
+	color = texture(sampler, tex_coord);
+	if (shading_mode == 0) {
+		return;
+	}
+	else if (shading_mode == 1) { // ambient and directional
+		color.xyz = (1 - ambient) * max(0, dot(normal, vec3(0, 0, -1))) * color.xyz + ambient * color.xyz;
+	}
+	else if (shading_mode == 2) { // only directional, lambertian;
+		color.xyz = max(0, dot(normal, vec3(0, 0, -1))) * color.xyz;
+	}
+	else if (shading_mode == 3) { // point light source
+		vec3 rp = ls_pos - pos;
+		float d = length(rp);
+		vec3 direction = normalize(rp);
+		float cosine = dot(direction, normal);
+		float intensity = 1 / (1 + attenuation * d);
+		color = 5 * intensity * cosine * color;
+	}
+}
